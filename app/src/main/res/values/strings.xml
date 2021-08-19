@@ -7,6 +7,9 @@
     <string name="timer_service_content_title">Timer Service</string>
     <string name="timer_service_content_description">Time: </string>
 
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+
     <string name="notification_channel_name">Channel name</string>
     <string name="notification_channel_description">Channel Description</string>
 </resources>

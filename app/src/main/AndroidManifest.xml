@@ -22,4 +22,6 @@
         <service android:name=".TimerService" />
     </application>
 
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
 </manifest>
