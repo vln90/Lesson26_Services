@@ -6,10 +6,14 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
-import android.os.Binder;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -27,12 +31,19 @@ public class TimerService extends Service {
     private static final String CHANNEL_ID = "channel_id_2";
     private static final int NOTIFICATION_ID = 1;
 
+    public static final int MSG_START_TIMER = 1;
+    public static final int MSG_STOP_TIMER = 2;
+    public static final String BUNDLE_KEY_TIME = "BUNDLE_KEY_TIME";
+
+    public static final int MSG_TIMER_CALLED = 3;
+    public static final String BUNDLE_CURRENT_TIME = "BUNDLE_CURRENT_TIME";
+
     public static final String ACTION_CLOSE = "TIMER_SERVICE_ACTION_CLOSE";
 
     private CountDownTimer mCountDownTimer;
 
-    private LocalTimerServiceBinder mLocalTimerServiceBinder = new LocalTimerServiceBinder();
-    private OnTimerChangedListener mOnTimerChangedListener;
+    private final Messenger mServiceMessenger = new Messenger(new MessengerHandler());
+    private Messenger mClientMessenger;
 
     @Override
     public void onCreate() {
@@ -72,7 +83,7 @@ public class TimerService extends Service {
     public IBinder onBind(Intent intent) {
         Log.d(TAG, "onBind() called with: intent = [" + intent + "]");
 
-        return mLocalTimerServiceBinder;
+        return mServiceMessenger.getBinder();
     }
 
     @Override
@@ -87,10 +98,6 @@ public class TimerService extends Service {
         super.onRebind(intent);
 
         Log.d(TAG, "onRebind() called with: intent = [" + intent + "]");
-    }
-
-    public void setOnTimerChangedListener(@Nullable OnTimerChangedListener onTimerChangedListener) {
-        mOnTimerChangedListener = onTimerChangedListener;
     }
 
     private void createNotificationChannel() {
@@ -138,9 +145,7 @@ public class TimerService extends Service {
             public void onTick(long millisUntilFinished) {
                 Log.d(TAG, "onTick() called with: millisUntilFinished = [" + millsToSeconds(millisUntilFinished) + "]");
 
-                if (mOnTimerChangedListener != null) {
-                    mOnTimerChangedListener.onTimerChanged("Time = " + millsToSeconds(millisUntilFinished));
-                }
+                sendCurrentTime(millsToSeconds(millisUntilFinished));
 
                 updateNotification(createNotification(millsToSeconds(millisUntilFinished)));
             }
@@ -156,6 +161,23 @@ public class TimerService extends Service {
         mCountDownTimer.start();
     }
 
+    private void sendCurrentTime(long time) {
+        Message message = Message.obtain(null, MSG_TIMER_CALLED);
+
+        Bundle bundle = new Bundle();
+        bundle.putString(BUNDLE_CURRENT_TIME, "Time: " + time);
+
+        message.setData(bundle);
+
+        if (mClientMessenger != null) {
+            try {
+                mClientMessenger.send(message);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     private void stopCountdownTimer() {
         if (mCountDownTimer != null) {
             mCountDownTimer.cancel();
@@ -167,13 +189,24 @@ public class TimerService extends Service {
         return time / 1000L;
     }
 
-    class LocalTimerServiceBinder extends Binder {
-        TimerService getTimerService() {
-            return TimerService.this;
-        }
-    }
+    public class MessengerHandler extends Handler {
+        @Override
+        public void handleMessage(@NonNull Message msg) {
+            super.handleMessage(msg);
 
-    public interface OnTimerChangedListener {
-        void onTimerChanged(String timer);
+            switch (msg.what) {
+                case MSG_START_TIMER:
+                    long time = msg.getData().getLong(BUNDLE_KEY_TIME);
+
+                    mClientMessenger = msg.replyTo;
+
+                    startCountdownTimer(time, 1000L);
+                    break;
+                case MSG_STOP_TIMER:
+                    stopCountdownTimer();
+                    break;
+                default:
+            }
+        }
     }
 }
