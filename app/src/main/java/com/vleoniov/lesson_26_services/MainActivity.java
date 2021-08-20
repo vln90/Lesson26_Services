@@ -85,8 +85,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void startService() {
-        ComponentName componentName = new ComponentName("com.vleonidov.lesson_23_another_process",
-                "com.vleonidov.lesson_23_another_process.TimerService");
+        ComponentName componentName = new ComponentName("com.vleoniov.timerservice",
+                "com.vleoniov.timerservice.TimerService");
         Intent intent = new Intent();
         intent.setComponent(componentName);
         startService(intent);
@@ -96,8 +96,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // Intent intent = new Intent(this, TimerService.class);
         // stopService(intent);
 
-        ComponentName componentName = new ComponentName("com.vleonidov.lesson_23_another_process",
-                "com.vleonidov.lesson_23_another_process.TimerService");
+        ComponentName componentName = new ComponentName("com.vleoniov.timerservice",
+                "com.vleoniov.timerservice.TimerService");
         Intent intent = new Intent();
         intent.setComponent(componentName);
         intent.setAction("TIMER_SERVICE_ACTION_CLOSE");
@@ -123,8 +123,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void bindService() {
-        ComponentName componentName = new ComponentName("com.vleonidov.lesson_23_another_process",
-                "com.vleonidov.lesson_23_another_process.TimerService");
+        ComponentName componentName = new ComponentName("com.vleoniov.timerservice",
+                "com.vleoniov.timerservice.TimerService");
         Intent intent = new Intent();
         intent.setComponent(componentName);
         bindService(intent, mTimerServiceConnection, BIND_AUTO_CREATE);
