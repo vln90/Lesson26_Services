@@ -6,33 +6,26 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
-import android.os.Messenger;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.vleoniov.timerservice.ITimerServiceAIDL;
+import com.vleoniov.timerservice.ITimerServiceResult;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private static final String TAG = "MainActivity";
 
-    public static final int MSG_START_TIMER = 1;
-    public static final int MSG_STOP_TIMER = 2;
-    public static final String BUNDLE_KEY_TIME = "BUNDLE_KEY_TIME";
-
-    public static final int MSG_TIMER_CALLED = 3;
-    public static final String BUNDLE_CURRENT_TIME = "BUNDLE_CURRENT_TIME";
-
     private TextView mTextView;
 
     private TimerServiceConnection mTimerServiceConnection;
+    private ITimerServiceAIDL mITimerServiceAIDL;
+    private Handler mHandler = new Handler();
 
-    private Messenger mTimerServiceMessenger;
-    private Messenger mMainActivityMessenger = new Messenger(new MainActivityHandler());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,16 +99,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void startTimer() {
-        if (mTimerServiceMessenger != null) {
-            Message message = Message.obtain(null, MSG_START_TIMER);
-
-            Bundle bundle = new Bundle();
-            bundle.putLong(BUNDLE_KEY_TIME, 30000L);
-            message.setData(bundle);
-            message.replyTo = mMainActivityMessenger;
-
+        if (mITimerServiceAIDL != null) {
             try {
-                mTimerServiceMessenger.send(message);
+                mITimerServiceAIDL.startTimer(30_000L, 1000L, mTimerServiceResult);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
@@ -131,26 +117,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void unbindService() {
-        if (mTimerServiceConnection != null && mTimerServiceMessenger != null) {
+        if (mTimerServiceConnection != null) {
             unbindService(mTimerServiceConnection);
-
-            mTimerServiceMessenger = null;
-        }
-    }
-
-    public class MainActivityHandler extends Handler {
-        @Override
-        public void handleMessage(@NonNull Message msg) {
-            super.handleMessage(msg);
-
-            switch (msg.what) {
-                case MSG_TIMER_CALLED:
-                    String time = msg.getData().getString(BUNDLE_CURRENT_TIME);
-
-                    mTextView.setText(time);
-
-                    break;
-            }
         }
     }
 
@@ -160,7 +128,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         public void onServiceConnected(ComponentName name, IBinder service) {
             Log.d(TAG, "onServiceConnected() called with: name = [" + name + "], service = [" + service + "]");
 
-            mTimerServiceMessenger = new Messenger(service);
+            mITimerServiceAIDL = ITimerServiceAIDL.Stub.asInterface(service);
         }
 
         @Override
@@ -168,4 +136,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Log.d(TAG, "onServiceDisconnected() called with: name = [" + name + "]");
         }
     }
+
+    private final ITimerServiceResult.Stub mTimerServiceResult = new ITimerServiceResult.Stub() {
+        @Override
+        public void onTick(long time) throws RemoteException {
+            mHandler.post(() -> mTextView.setText(Long.toString(time)));
+        }
+    };
 }
