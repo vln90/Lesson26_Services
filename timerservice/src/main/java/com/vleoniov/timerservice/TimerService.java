@@ -179,7 +179,7 @@ public class TimerService extends Service {
         @Override
         public void startTimer(long time, long period, ITimerServiceResult result) throws RemoteException {
             mHandler.post(() -> startCountdownTimer(time, period));
-
+            // startCountdownTimer(time, period);
             mTimerServiceResult = result;
         }
     };
